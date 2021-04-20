@@ -1,18 +1,24 @@
 package com.katevu.attendance.ui.login
 
+import android.util.Log
 import android.util.Patterns
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.katevu.attendance.R
-import com.katevu.attendance.models.Auth
-import com.katevu.attendance.models.User
+import com.katevu.attendance.data.model.Auth
+import com.katevu.attendance.data.model.User
 import com.katevu.attendance.network.LoginApi
 import kotlinx.coroutines.launch
 import java.util.*
 
+
+enum class LoginApiStatus { LOADING, ERROR, DONE }
+
 class LoginViewModel() : ViewModel() {
+
+    private val TAG = "LoginViewModel"
 
     private val _loginForm = MutableLiveData<LoginFormState>()
     val loginFormState: LiveData<LoginFormState> = _loginForm
@@ -25,38 +31,39 @@ class LoginViewModel() : ViewModel() {
     val auth: LiveData<Auth> = _auth
 
 
-    fun getPost(email: String, password: String){
-        viewModelScope.launch {
-            val user = User(email, password, true)
-            val response = LoginApi.retrofitService.login(user)
-            val result = response.body()
-
-            val cal: Calendar = Calendar.getInstance();
-            cal.timeInMillis
-
-            if (result != null) {
-                result.expiredDate = cal.timeInMillis + (result.expiresIn.toLong() * 10000)
-            }
-            _auth.value = result!!
-        }
-    }
-
     fun login(username: String, password: String) {
         // can be launched in a separate asynchronous job
 
         viewModelScope.launch {
             val user = User(username, password, true)
             val response = LoginApi.retrofitService.login(user)
-            val result = response.body()
 
-            val cal: Calendar = Calendar.getInstance();
-            cal.timeInMillis
+            val responseCode = response.code()
 
-            if (result != null) {
-                result.expiredDate = cal.timeInMillis + (result.expiresIn.toLong() * 10000)
+            if (responseCode != 200) {
+                _loginResult.value =  LoginResult(null, responseCode)
+            } else {
+                val result = response.body()
+
+                val cal: Calendar = Calendar.getInstance();
+                cal.timeInMillis
+
+                if (result != null) {
+                    result.expiredDate = cal.timeInMillis + (result.expiresIn.toLong() * 10000)
+                }
+                _auth.value = result!!
+                _loginResult.value = LoginResult(result, null)
+
+                Log.d(TAG, "result: ${responseCode}")
+
+                Log.d(TAG, "result: ${result}")
             }
-            _auth.value = result!!
+
         }
+    }
+
+    fun savedUserInfo() {
+
     }
 
     fun loginDataChanged(username: String, password: String) {

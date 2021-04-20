@@ -1,7 +1,7 @@
 package com.katevu.attendance.network
 
-import com.katevu.attendance.models.Auth
-import com.katevu.attendance.models.User
+import com.katevu.attendance.data.model.Auth
+import com.katevu.attendance.data.model.User
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import retrofit2.Response

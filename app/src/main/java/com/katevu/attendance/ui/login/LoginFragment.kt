@@ -1,5 +1,6 @@
 package com.katevu.attendance.ui.login
 
+import android.content.Context
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -8,19 +9,33 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
-import androidx.annotation.StringRes
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import com.katevu.attendance.R
 import com.katevu.attendance.databinding.FragmentLoginBinding
+import com.katevu.attendance.data.model.Auth
 
 
 class LoginFragment : Fragment() {
 
+    interface Callbacks {
+        fun loginSuccessful()
+    }
+
     lateinit var binding: FragmentLoginBinding
     private val loginViewModel: LoginViewModel by viewModels()
+    private var callbacks: Callbacks? = null
 
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        callbacks = context as Callbacks?
+    }
+
+    override fun onDetach() {
+        super.onDetach()
+        callbacks = null
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -65,7 +80,7 @@ class LoginFragment : Fragment() {
                 loginResult ?: return@Observer
                 binding.loading.visibility = View.GONE
                 loginResult.error?.let {
-                    showLoginFailed(it)
+                    showLoginFailed(it.toString())
                 }
                 loginResult.success?.let {
                     updateUiWithUser(it)
@@ -109,15 +124,23 @@ class LoginFragment : Fragment() {
         }
     }
 
-    private fun updateUiWithUser(model: LoggedInUserView) {
-        val welcome = getString(R.string.welcome) + model.displayName
-        // TODO : initiate successful logged in experience
+    private fun updateUiWithUser(model: Auth) {
+        val welcome = getString(R.string.welcome) + model._userId
         val appContext = context?.applicationContext ?: return
         Toast.makeText(appContext, welcome, Toast.LENGTH_LONG).show()
+        callbacks?.loginSuccessful()
     }
 
-    private fun showLoginFailed(@StringRes errorString: Int) {
+    private fun showLoginFailed(errorString: String) {
         val appContext = context?.applicationContext ?: return
         Toast.makeText(appContext, errorString, Toast.LENGTH_LONG).show()
     }
+
+
+    companion object {
+        fun newInstance(): LoginFragment {
+            return LoginFragment()
+            }
+        }
+
 }

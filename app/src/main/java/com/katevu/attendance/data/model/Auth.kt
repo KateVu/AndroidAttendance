@@ -1,4 +1,4 @@
-package com.katevu.attendance.models
+package com.katevu.attendance.data.model
 
 import android.os.Build
 import androidx.annotation.RequiresApi

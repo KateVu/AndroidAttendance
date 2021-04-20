@@ -1,4 +1,4 @@
-package com.katevu.attendance.models
+package com.katevu.attendance.data.model
 
 
 data class User (

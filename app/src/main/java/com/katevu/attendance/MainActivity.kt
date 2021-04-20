@@ -1,31 +1,48 @@
 package com.katevu.attendance
 
 import android.os.Bundle
-import android.util.Log
-import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import com.katevu.attendance.databinding.ActivityLoginBinding
-import com.katevu.attendance.ui.login.LoginViewModel
+import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.FragmentTransaction
+import com.katevu.attendance.ui.ClassFragment
+import com.katevu.attendance.ui.login.LoginFragment
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), LoginFragment.Callbacks {
     private val TAG = "MainActivity"
-
-    lateinit var binding: ActivityLoginBinding
-    private val viewModel: LoginViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityLoginBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        binding.btnSignin.setOnClickListener{login()}
+        setContentView(R.layout.activity_main)
+
+        val isFragmentContainerEmpty = savedInstanceState == null
+        if (isFragmentContainerEmpty) {
+            displayFragment()
+        }
     }
 
-    private fun login() {
-        val userName = binding.username.text.toString()
-        val password = binding.password.text.toString()
-        Log.d(TAG, "Username: ${userName}")
-        Log.d(TAG, "Password: ${password}")
-        viewModel.getPost(userName, password)
+    fun displayFragment() {
+        // Instantiate the fragment.
+        val loginFragment: LoginFragment = LoginFragment.newInstance()
 
+        // Get the FragmentManager and start a transaction.
+        val fragmentManager: FragmentManager = supportFragmentManager
+        val fragmentTransaction: FragmentTransaction = fragmentManager
+            .beginTransaction()
+
+        // Add the SimpleFragment.
+        fragmentTransaction.add(
+            R.id.fragment_container,
+            loginFragment
+        ).addToBackStack(null).commit()
     }
+
+    override fun loginSuccessful() {
+        val classFragment = ClassFragment.newInstance(1)
+        supportFragmentManager
+            .beginTransaction()
+            .replace(R.id.fragment_container, classFragment)
+            .addToBackStack(null)
+            .commit()
+    }
+
 }
