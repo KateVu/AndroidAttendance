@@ -13,8 +13,9 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import com.katevu.attendance.R
-import com.katevu.attendance.databinding.FragmentLoginBinding
+import com.katevu.attendance.data.PrefRepo
 import com.katevu.attendance.data.model.Auth
+import com.katevu.attendance.databinding.FragmentLoginBinding
 
 
 class LoginFragment : Fragment() {
@@ -26,6 +27,8 @@ class LoginFragment : Fragment() {
     lateinit var binding: FragmentLoginBinding
     private val loginViewModel: LoginViewModel by viewModels()
     private var callbacks: Callbacks? = null
+    private val prefRepository by lazy { PrefRepo(requireContext()) }
+
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -55,11 +58,12 @@ class LoginFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-
-//        val usernameEditText = view.findViewById<EditText>(R.id.username)
-//        val passwordEditText = view.findViewById<EditText>(R.id.password)
-//        val loginButton = view.findViewById<Button>(R.id.login)
-//        val loadingProgressBar = view.findViewById<ProgressBar>(R.id.loading)
+        //get login infor from pref
+//        val isLoggedIn = prefRepository.getLoggedIn()
+//
+//        if (isLoggedIn) {
+//            callbacks?.loginSuccessful()
+//        }
 
         loginViewModel.loginFormState.observe(viewLifecycleOwner,
             Observer { loginFormState ->
@@ -83,6 +87,8 @@ class LoginFragment : Fragment() {
                     showLoginFailed(it.toString())
                 }
                 loginResult.success?.let {
+                    //To set the value
+                    prefRepository.setLoggedIn(true)
                     updateUiWithUser(it)
                 }
             })

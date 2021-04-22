@@ -48,15 +48,30 @@ class PrefRepo(val context: Context) {
         PREF_LOGGED_IN.put(isLoggedIn)
     }
 
-    fun setLoggedIn() = PREF_LOGGED_IN.getBoolean()
+    fun getLoggedIn() = PREF_LOGGED_IN.getBoolean()
 
     fun setShareMsg(msg: String) {
         PREF_SHARE_MESSAGE.put(msg)
     }
 
     fun getShareMsg() = PREF_SHARE_MESSAGE.getString()
+
     fun clearData() {
         editor.clear()
         editor.commit()
     }
+
+//    MyObject myObject = new MyObject;
+////set variables of 'myObject', etc.
+//
+//    Editor prefsEditor = mPrefs.edit();
+//    Gson gson = new Gson();
+//    String json = gson.toJson(myObject);
+//    prefsEditor.putString("MyObject", json);
+//    prefsEditor.commit();
+//    To retrieve:
+//
+//    Gson gson = new Gson();
+//    String json = mPrefs.getString("MyObject", "");
+//    MyObject obj = gson.fromJson(json, MyObject.class);
 }

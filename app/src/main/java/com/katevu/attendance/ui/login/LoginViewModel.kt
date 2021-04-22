@@ -62,7 +62,8 @@ class LoginViewModel() : ViewModel() {
         }
     }
 
-    fun savedUserInfo() {
+    fun autoLogin() {
+
 
     }
 

@@ -1,14 +1,20 @@
 package com.katevu.attendance
 
+import android.nfc.NfcAdapter
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
 import com.katevu.attendance.ui.ClassFragment
 import com.katevu.attendance.ui.login.LoginFragment
+import com.katevu.attendance.utils.WritableTag
 
 class MainActivity : AppCompatActivity(), LoginFragment.Callbacks {
     private val TAG = "MainActivity"
+
+    private var adapter: NfcAdapter? = null
+    var tag: WritableTag? = null
+    var tagId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
