@@ -1,20 +1,14 @@
 package com.katevu.attendance
 
-import android.nfc.NfcAdapter
+import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
-import com.katevu.attendance.ui.ClassFragment
 import com.katevu.attendance.ui.login.LoginFragment
-import com.katevu.attendance.utils.WritableTag
 
 class MainActivity : AppCompatActivity(), LoginFragment.Callbacks {
     private val TAG = "MainActivity"
-
-    private var adapter: NfcAdapter? = null
-    var tag: WritableTag? = null
-    var tagId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,6 +18,7 @@ class MainActivity : AppCompatActivity(), LoginFragment.Callbacks {
         if (isFragmentContainerEmpty) {
             displayFragment()
         }
+
     }
 
     fun displayFragment() {
@@ -42,13 +37,19 @@ class MainActivity : AppCompatActivity(), LoginFragment.Callbacks {
         ).addToBackStack(null).commit()
     }
 
-    override fun loginSuccessful() {
-        val classFragment = ClassFragment.newInstance(1)
-        supportFragmentManager
-            .beginTransaction()
-            .replace(R.id.fragment_container, classFragment)
-            .addToBackStack(null)
-            .commit()
-    }
+//    override fun loginSuccessful() {
+//        val classFragment = ClassFragment.newInstance(1)
+//        supportFragmentManager
+//            .beginTransaction()
+//            .replace(R.id.fragment_container, classFragment)
+//            .addToBackStack(null)
+//            .commit()
+//    }
 
+
+    override fun loginSuccessful() {
+        val intent = Intent(this, CheckinActivity::class.java)
+
+        startActivity(intent)
+    }
 }

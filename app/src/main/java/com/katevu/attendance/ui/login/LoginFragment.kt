@@ -50,7 +50,7 @@ class LoginFragment : Fragment() {
 
         //here data must be an instance of the class MarsDataProvider
         //here data must be an instance of the class MarsDataProvider
-        return binding.getRoot()
+        return binding.root
 
 //        return inflater.inflate(R.layout.fragment_login, container, false)
     }
@@ -58,12 +58,13 @@ class LoginFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        //get login infor from pref
-//        val isLoggedIn = prefRepository.getLoggedIn()
-//
-//        if (isLoggedIn) {
-//            callbacks?.loginSuccessful()
-//        }
+//        get login infor from pref
+//        TODO: need to add more condition: check expire date
+        val isLoggedIn = prefRepository.getLoggedIn()
+
+        if (isLoggedIn) {
+            callbacks?.loginSuccessful()
+        }
 
         loginViewModel.loginFormState.observe(viewLifecycleOwner,
             Observer { loginFormState ->

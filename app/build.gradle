@@ -2,7 +2,9 @@ plugins {
     id 'com.android.application'
     id 'kotlin-android'
 }
-
+ext {
+    navigationVersion = "2.3.5"
+}
 android {
     compileSdkVersion 30
     buildToolsVersion "30.0.1"
@@ -26,6 +28,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        dataBinding = true
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -60,8 +63,17 @@ dependencies {
 
     //Basecode
     implementation "com.google.guava:guava:24.1-jre"
-
     implementation 'com.android.support:multidex:1.0.3'
+
+    //Navigation
+    implementation "com.google.android.material:material:$version"
+    implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"
+    implementation "androidx.navigation:navigation-ui-ktx:$navigationVersion"
+
+    //Circle image
+    implementation 'com.mikhaellopez:circularimageview:4.2.0'
+    implementation 'androidx.navigation:navigation-fragment:2.3.5'
+    implementation 'androidx.navigation:navigation-ui:2.3.5'
 
     testImplementation 'junit:junit:4.+'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
