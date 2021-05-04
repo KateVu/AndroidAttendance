@@ -8,12 +8,14 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentTransaction
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import com.katevu.attendance.CheckinActivity
 import com.katevu.attendance.R
 import com.katevu.attendance.ui.checkinresult.CheckinFailureFragment
 import com.katevu.attendance.ui.checkinresult.CheckinSuccessFragment
+import com.katevu.attendance.ui.classes.TodayClassFragment
 
 
-class HomeFragment : Fragment() {
+class HomeFragment : Fragment(), CheckinActivity.Callbacks {
 
     private lateinit var homeViewModel: HomeViewModel
 
@@ -22,7 +24,6 @@ class HomeFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-
 
         homeViewModel =
             ViewModelProvider(this).get(HomeViewModel::class.java)
@@ -34,7 +35,7 @@ class HomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        insertSuccessFragment()
+        insertTodayClassesFragment()
     }
 
     // Embeds the child fragment dynamically
@@ -49,5 +50,19 @@ class HomeFragment : Fragment() {
         val transaction: FragmentTransaction = childFragmentManager.beginTransaction()
         transaction.replace(R.id.child_fragment_container, childFragment).commit()
     }
+
+    private fun insertTodayClassesFragment() {
+        val childFragment = TodayClassFragment.newInstance(1)
+        val transaction: FragmentTransaction = childFragmentManager.beginTransaction()
+        transaction.replace(R.id.child_fragment_container, childFragment).commit()
+    }
+
+    override fun submitSuccessful() {
+        insertSuccessFragment()
+    }
+
+    override fun submitFailure() {
+        insertFailureFragment()    }
+
 
 }

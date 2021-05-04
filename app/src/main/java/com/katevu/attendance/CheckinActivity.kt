@@ -11,6 +11,7 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
@@ -19,10 +20,10 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
-import com.google.android.material.snackbar.Snackbar
 import com.katevu.attendance.data.PrefRepo
+import com.katevu.attendance.data.model.Attendance
+import com.katevu.attendance.data.model.Auth
 import com.katevu.attendance.utils.NfcUtils
 import com.katevu.attendance.utils.WritableTag
 import java.io.UnsupportedEncodingException
@@ -35,6 +36,7 @@ class CheckinActivity : AppCompatActivity() {
     private val TAG = "CheckinActivity"
 
     private lateinit var appBarConfiguration: AppBarConfiguration
+    private val checkinActivityViewModel: CheckinActivityViewModel by viewModels()
     private val prefRepository by lazy { PrefRepo(this) }
 
     //init for NFC
@@ -45,6 +47,16 @@ class CheckinActivity : AppCompatActivity() {
     var tag: WritableTag? = null
     var tagId: String? = null
 
+    //init for submit data
+    var logginUser: Auth? = null;
+    var isValid: Boolean = false;
+    var result: Boolean = false;
+    private var callbacks: Callbacks? = null
+
+    interface Callbacks {
+        fun submitSuccessful();
+        fun submitFailure()
+    }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,29 +65,50 @@ class CheckinActivity : AppCompatActivity() {
         val toolbar: Toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
 
+//        callbacks = applicationContext as Callbacks?
+
+
         val drawerLayout: DrawerLayout = findViewById(R.id.drawer_layout)
         val navView: NavigationView = findViewById(R.id.nav_view)
         val navController = findNavController(R.id.nav_host_fragment)
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         appBarConfiguration = AppBarConfiguration(
-            setOf(
-                R.id.nav_home, R.id.nav_gallery, R.id.nav_slideshow
-            ), drawerLayout
+                setOf(
+                        R.id.nav_home, R.id.nav_slideshow
+                ), drawerLayout
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
 
         //check login first
 
-        val isLoggin = prefRepository.getLoggedIn()
-        if (!isLoggin) {
+        logginUser = prefRepository.getLogginUser();
+
+        if (logginUser != null) {
+            val cal: Calendar = Calendar.getInstance();
+            isValid = cal.timeInMillis < logginUser!!.expiredDate!!
+            if (!isValid) {
+                prefRepository.clearData()
+            }
+        }
+
+        if (!isValid) {
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
             showToast("Please log in first")
-        }
+        };
 
-        initNfcAdapter()
+        checkinActivityViewModel.checkinResult.observe(this, androidx.lifecycle.Observer {
+            checkinResult -> result = checkinResult;
+
+        })
+
+//        chec.loginResult.observe(viewLifecycleOwner,
+//                Observer { loginResult ->
+
+
+                initNfcAdapter()
 
         val intent = Intent(this, javaClass).apply {
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -94,15 +127,21 @@ class CheckinActivity : AppCompatActivity() {
 
         intentFiltersArray = arrayOf(ndef)
         techListsArray = arrayOf(
-            arrayOf<String>(NfcA::class.java.name),
-            arrayOf<String>(NfcB::class.java.name),
-            arrayOf<String>(IsoDep::class.java.name),
-            arrayOf<String>(MifareClassic::class.java.name),
-            arrayOf<String>(NfcV::class.java.name),
-            arrayOf<String>(NfcF::class.java.name),
-            arrayOf<String>(NdefFormatable::class.java.name),
-            arrayOf<String>(MifareUltralight::class.java.name),
+                arrayOf<String>(NfcA::class.java.name),
+                arrayOf<String>(NfcB::class.java.name),
+                arrayOf<String>(IsoDep::class.java.name),
+                arrayOf<String>(MifareClassic::class.java.name),
+                arrayOf<String>(NfcV::class.java.name),
+                arrayOf<String>(NfcF::class.java.name),
+                arrayOf<String>(NdefFormatable::class.java.name),
+                arrayOf<String>(MifareUltralight::class.java.name),
         )
+
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        callbacks = null
 
     }
 
@@ -233,6 +272,30 @@ class CheckinActivity : AppCompatActivity() {
 
                     if (payload != null) {
                         onTagTapped(NfcUtils.getUID(intent), payload)
+
+                        if (logginUser!= null && logginUser!!.token != null) {
+                            var attendance = Attendance(
+                                    logginUser!!.token!!,
+                                    logginUser!!.userID,
+                                    NfcUtils.getUID(intent),
+                                    Calendar.getInstance().timeInMillis.toString()
+                            );
+
+                            val url: String = "https://recordattendance-1fa08-default-rtdb.firebaseio.com/orders/${logginUser!!.userID}.json?auth=${logginUser!!.token}";
+
+                            Log.d(TAG, "requestURL: $url")
+                            Log.d(TAG, "attendance: $attendance")
+
+
+                            checkinActivityViewModel.checkin(url,attendance)
+
+                            if (result) {
+                                Log.d(TAG, "Check in result: $result")
+                                callbacks?.submitSuccessful()
+                            } else {
+                                callbacks?.submitFailure()
+                            }
+                        }
 
 
                     }

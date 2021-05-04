@@ -16,6 +16,7 @@ import com.katevu.attendance.R
 import com.katevu.attendance.data.PrefRepo
 import com.katevu.attendance.data.model.Auth
 import com.katevu.attendance.databinding.FragmentLoginBinding
+import java.util.*
 
 
 class LoginFragment : Fragment() {
@@ -47,23 +48,22 @@ class LoginFragment : Fragment() {
     ): View? {
 
         binding = FragmentLoginBinding.inflate(inflater, container, false);
-
-        //here data must be an instance of the class MarsDataProvider
-        //here data must be an instance of the class MarsDataProvider
         return binding.root
-
-//        return inflater.inflate(R.layout.fragment_login, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-//        get login infor from pref
-//        TODO: need to add more condition: check expire date
-        val isLoggedIn = prefRepository.getLoggedIn()
+        val logginUser = prefRepository.getLogginUser();
 
-        if (isLoggedIn) {
-            callbacks?.loginSuccessful()
+        if (logginUser != null) {
+            val cal: Calendar = Calendar.getInstance();
+            val isValid = if (cal.timeInMillis < logginUser.expiredDate!!) {true} else false
+            if (isValid) {
+                callbacks?.loginSuccessful()
+            } else {
+                prefRepository.clearData()
+            }
         }
 
         loginViewModel.loginFormState.observe(viewLifecycleOwner,
@@ -89,7 +89,8 @@ class LoginFragment : Fragment() {
                 }
                 loginResult.success?.let {
                     //To set the value
-                    prefRepository.setLoggedIn(true)
+//                    prefRepository.setLoggedIn(true)
+                    prefRepository.setLogginUser(it)
                     updateUiWithUser(it)
                 }
             })

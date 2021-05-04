@@ -7,7 +7,7 @@ import java.util.Calendar.getInstance
 
 data class Auth @RequiresApi(Build.VERSION_CODES.O) constructor(
     @Json(name = "idToken")
-    var _token: String,
+    var _token: String?,
     @Json(name = "expiresIn")
     var expiresIn: String,
     @Json(name = "localId")
@@ -25,6 +25,12 @@ data class Auth @RequiresApi(Build.VERSION_CODES.O) constructor(
             }
             return null;
         }
+
+    val userID: String?
+        get() {
+            return _userId;
+        }
+
 }
 
 

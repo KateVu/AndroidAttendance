@@ -2,10 +2,12 @@ package com.katevu.attendance.data
 
 import PREFERENCE_NAME
 import PREF_LOGGED_IN
+import PREF_LOGGED_USER
 import PREF_SHARE_MESSAGE
 import android.content.Context
 import android.content.SharedPreferences
 import com.google.gson.Gson
+import com.katevu.attendance.data.model.Auth
 
 
 class PrefRepo(val context: Context) {
@@ -61,17 +63,12 @@ class PrefRepo(val context: Context) {
         editor.commit()
     }
 
-//    MyObject myObject = new MyObject;
-////set variables of 'myObject', etc.
-//
-//    Editor prefsEditor = mPrefs.edit();
-//    Gson gson = new Gson();
-//    String json = gson.toJson(myObject);
-//    prefsEditor.putString("MyObject", json);
-//    prefsEditor.commit();
-//    To retrieve:
-//
-//    Gson gson = new Gson();
-//    String json = mPrefs.getString("MyObject", "");
-//    MyObject obj = gson.fromJson(json, MyObject.class);
+
+    fun setLogginUser(user: Auth) {
+        var jsonString: String = gson.toJson(user);
+        PREF_LOGGED_USER.put(jsonString);
+    }
+
+    fun getLogginUser() = gson.fromJson<Auth>(PREF_LOGGED_USER.getString(), Auth::class.java)
+
 }
