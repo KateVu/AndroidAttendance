@@ -15,6 +15,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
+import androidx.fragment.app.Fragment
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
@@ -65,12 +66,17 @@ class CheckinActivity : AppCompatActivity() {
         val toolbar: Toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
 
-//        callbacks = applicationContext as Callbacks?
-
-
         val drawerLayout: DrawerLayout = findViewById(R.id.drawer_layout)
         val navView: NavigationView = findViewById(R.id.nav_view)
         val navController = findNavController(R.id.nav_host_fragment)
+
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment)
+        val fragment: Fragment = navHostFragment?.childFragmentManager?.fragments?.get(0)!!
+
+        if (fragment is Callbacks) {
+            callbacks = fragment as Callbacks
+        }
+
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         appBarConfiguration = AppBarConfiguration(
@@ -100,15 +106,16 @@ class CheckinActivity : AppCompatActivity() {
         };
 
         checkinActivityViewModel.checkinResult.observe(this, androidx.lifecycle.Observer {
-            checkinResult -> result = checkinResult;
-
+            if (it) {
+                Log.d(TAG, "Check in result: $result");
+                callbacks?.submitSuccessful()
+            } else {
+                Log.d(TAG, "Check in failure");
+                callbacks?.submitFailure()
+            }
         })
 
-//        chec.loginResult.observe(viewLifecycleOwner,
-//                Observer { loginResult ->
-
-
-                initNfcAdapter()
+        initNfcAdapter()
 
         val intent = Intent(this, javaClass).apply {
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -182,6 +189,7 @@ class CheckinActivity : AppCompatActivity() {
         disableNfcForegroundDispatch()
         super.onPause()
     }
+
     private fun disableNfcForegroundDispatch() {
         try {
             adapter?.disableForegroundDispatch(this)
@@ -273,7 +281,7 @@ class CheckinActivity : AppCompatActivity() {
                     if (payload != null) {
                         onTagTapped(NfcUtils.getUID(intent), payload)
 
-                        if (logginUser!= null && logginUser!!.token != null) {
+                        if (logginUser != null && logginUser!!.token != null) {
                             var attendance = Attendance(
                                     logginUser!!.token!!,
                                     logginUser!!.userID,
@@ -287,14 +295,20 @@ class CheckinActivity : AppCompatActivity() {
                             Log.d(TAG, "attendance: $attendance")
 
 
-                            checkinActivityViewModel.checkin(url,attendance)
+                            checkinActivityViewModel.checkin(url, attendance)
 
-                            if (result) {
-                                Log.d(TAG, "Check in result: $result")
-                                callbacks?.submitSuccessful()
-                            } else {
-                                callbacks?.submitFailure()
-                            }
+                            Log.d(TAG, "result in Activity: $result")
+
+                            val test = checkinActivityViewModel.result
+
+                            Log.d(TAG, "test result in Activity: $test")
+
+//                            if (test) {
+//                                Log.d(TAG, "Check in result: $result")
+//                                callbacks?.submitSuccessful()
+//                            } else {
+//                                callbacks?.submitFailure()
+//                            }
                         }
 
 
