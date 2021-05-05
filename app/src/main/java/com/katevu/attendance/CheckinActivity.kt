@@ -14,17 +14,12 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
-import androidx.drawerlayout.widget.DrawerLayout
-import androidx.fragment.app.Fragment
-import androidx.navigation.findNavController
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.navigateUp
-import androidx.navigation.ui.setupActionBarWithNavController
-import androidx.navigation.ui.setupWithNavController
-import com.google.android.material.navigation.NavigationView
 import com.katevu.attendance.data.PrefRepo
 import com.katevu.attendance.data.model.Attendance
 import com.katevu.attendance.data.model.Auth
+import com.katevu.attendance.ui.checkinresult.CheckinFailureFragment
+import com.katevu.attendance.ui.checkinresult.CheckinSuccessFragment
+import com.katevu.attendance.ui.classes.TodayClassFragment
 import com.katevu.attendance.utils.NfcUtils
 import com.katevu.attendance.utils.WritableTag
 import java.io.UnsupportedEncodingException
@@ -32,11 +27,10 @@ import java.nio.charset.Charset
 import java.util.*
 import kotlin.experimental.and
 
-class CheckinActivity : AppCompatActivity() {
+class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, CheckinFailureFragment.Callbacks {
 
     private val TAG = "CheckinActivity"
 
-    private lateinit var appBarConfiguration: AppBarConfiguration
     private val checkinActivityViewModel: CheckinActivityViewModel by viewModels()
     private val prefRepository by lazy { PrefRepo(this) }
 
@@ -52,12 +46,6 @@ class CheckinActivity : AppCompatActivity() {
     var logginUser: Auth? = null;
     var isValid: Boolean = false;
     var result: Boolean = false;
-    private var callbacks: Callbacks? = null
-
-    interface Callbacks {
-        fun submitSuccessful();
-        fun submitFailure()
-    }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,26 +54,10 @@ class CheckinActivity : AppCompatActivity() {
         val toolbar: Toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
 
-        val drawerLayout: DrawerLayout = findViewById(R.id.drawer_layout)
-        val navView: NavigationView = findViewById(R.id.nav_view)
-        val navController = findNavController(R.id.nav_host_fragment)
-
-        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment)
-        val fragment: Fragment = navHostFragment?.childFragmentManager?.fragments?.get(0)!!
-
-        if (fragment is Callbacks) {
-            callbacks = fragment as Callbacks
+        val isFragmentContainerEmpty = savedInstanceState == null
+        if (isFragmentContainerEmpty) {
+            insertTodayClassesFragment()
         }
-
-        // Passing each menu ID as a set of Ids because each
-        // menu should be considered as top level destinations.
-        appBarConfiguration = AppBarConfiguration(
-                setOf(
-                        R.id.nav_home, R.id.nav_slideshow
-                ), drawerLayout
-        )
-        setupActionBarWithNavController(navController, appBarConfiguration)
-        navView.setupWithNavController(navController)
 
         //check login first
 
@@ -108,10 +80,10 @@ class CheckinActivity : AppCompatActivity() {
         checkinActivityViewModel.checkinResult.observe(this, androidx.lifecycle.Observer {
             if (it) {
                 Log.d(TAG, "Check in result: $result");
-                callbacks?.submitSuccessful()
+                insertSuccessFragment()
             } else {
                 Log.d(TAG, "Check in failure");
-                callbacks?.submitFailure()
+                insertFailureFragment()
             }
         })
 
@@ -148,7 +120,6 @@ class CheckinActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        callbacks = null
 
     }
 
@@ -156,11 +127,6 @@ class CheckinActivity : AppCompatActivity() {
         // Inflate the menu; this adds items to the action bar if it is present.
         menuInflater.inflate(R.menu.checkin, menu)
         return true
-    }
-
-    override fun onSupportNavigateUp(): Boolean {
-        val navController = findNavController(R.id.nav_host_fragment)
-        return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
     }
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
@@ -188,6 +154,30 @@ class CheckinActivity : AppCompatActivity() {
     override fun onPause() {
         disableNfcForegroundDispatch()
         super.onPause()
+    }
+
+    // Embeds the child fragment dynamically
+    private fun insertSuccessFragment() {
+        val childFragment = CheckinSuccessFragment.newInstance("You are in room: BA101", "14.00 PM 23 Apr, 2021")
+
+        supportFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container_checkin, childFragment)
+                .commit()
+    }
+
+    private fun insertFailureFragment() {
+        val childFragment = CheckinFailureFragment.newInstance("Cannot connect. Please try again")
+
+        supportFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container_checkin, childFragment)
+                .commit()
+    }
+
+    private fun insertTodayClassesFragment() {
+        val childFragment = TodayClassFragment.newInstance(1)
+        supportFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container_checkin, childFragment)
+                .commit()
     }
 
     private fun disableNfcForegroundDispatch() {
@@ -360,6 +350,14 @@ class CheckinActivity : AppCompatActivity() {
 
     private fun onTagTapped(superTagId: String, superTagData: String) {
         showToast("id: ${superTagId} and data: ${superTagData}")
+    }
+
+    override fun dismissSuccessMessage() {
+        insertTodayClassesFragment()
+    }
+
+    override fun dismissFailureMessage() {
+        insertTodayClassesFragment()
     }
 
 
