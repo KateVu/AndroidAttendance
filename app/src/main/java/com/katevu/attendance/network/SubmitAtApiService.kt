@@ -8,13 +8,12 @@ import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Url
 
-//    val url: String = 'https://flutter-update.firebaseio.com/orders/$userId.json?auth=$authToken';
-
 private const val LOGIN_URL = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyAe3yRKq254ixkDxfqSvtvmsm9OXTOZx20"
-private  const val BASE_URL = "https://recordattendance-1fa08-default-rtdb.firebaseio.com/"
+private  const val BASE_URL = "https://mobile-attendance-recorder.herokuapp.com/"
 
 
 
@@ -36,8 +35,10 @@ private val retrofit = Retrofit.Builder()
 
 interface SubmitAtApiService {
     @POST
-    suspend fun submitAttendance(@Url fullUrl: String,
-            @Body attendance: Attendance
+    suspend fun submitAttendance(
+        @Url fullUrl: String,
+        @Header("token") token: String,
+        @Body attendance: Attendance
     ): Response<ResponseBody>
 
 }

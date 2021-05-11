@@ -1,6 +1,6 @@
 package com.katevu.attendance.network
 
-import com.katevu.attendance.data.model.Auth
+import com.katevu.attendance.data.model.LoggedInUser
 import com.katevu.attendance.data.model.User
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -10,8 +10,8 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.POST
 
-private const val LOGIN_URL = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyAe3yRKq254ixkDxfqSvtvmsm9OXTOZx20"
-private  const val BASE_URL = "https://identitytoolkit.googleapis.com"
+private const val LOGIN_URL = "https://mobile-attendance-recorder.herokuapp.com/api/v1/login"
+private  const val BASE_URL = "https://mobile-attendance-recorder.herokuapp.com/"
 
 
 
@@ -42,7 +42,7 @@ interface LoginApiService {
     @POST(LOGIN_URL)
     suspend fun login(
             @Body user: User
-    ): Response<Auth>
+    ): Response<LoggedInUser>
 
 }
 

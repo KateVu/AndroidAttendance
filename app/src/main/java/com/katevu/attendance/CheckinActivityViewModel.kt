@@ -22,17 +22,20 @@ class CheckinActivityViewModel: ViewModel() {
 
     var result: Boolean = false;
 
-    fun checkin(url: String, attendance: Attendance) {
+    fun checkin(url: String, token: String, attendance: Attendance) {
+
+        Log.d(TAG, "Call check in with url: $url");
+        Log.d(TAG, "Call check in with token: $token")
+        Log.d(TAG, "Call check in with datetime: ${attendance.dateTime}")
+
         // can be launched in a separate asynchronous job
 
         viewModelScope.launch {
-            val response = SubmitAtApi.retrofitService.submitAttendance(url, attendance)
+            val response = SubmitAtApi.retrofitService.submitAttendance(url, token, attendance)
 
             val responseCode = response.code()
 
             _checkinResult.value = responseCode == 200
-
-            var temp = responseCode == 200
 
             result = responseCode == 200
 

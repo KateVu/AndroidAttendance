@@ -16,7 +16,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import com.katevu.attendance.data.PrefRepo
 import com.katevu.attendance.data.model.Attendance
-import com.katevu.attendance.data.model.Auth
+import com.katevu.attendance.data.model.LoggedInUser
 import com.katevu.attendance.ui.checkinresult.CheckinFailureFragment
 import com.katevu.attendance.ui.checkinresult.CheckinSuccessFragment
 import com.katevu.attendance.ui.classes.TodayClassFragment
@@ -27,7 +27,8 @@ import java.nio.charset.Charset
 import java.util.*
 import kotlin.experimental.and
 
-class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, CheckinFailureFragment.Callbacks {
+class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
+    CheckinFailureFragment.Callbacks {
 
     private val TAG = "CheckinActivity"
 
@@ -43,7 +44,7 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, C
     var tagId: String? = null
 
     //init for submit data
-    var logginUser: Auth? = null;
+    var logginUser: LoggedInUser? = null;
     var isValid: Boolean = false;
     var result: Boolean = false;
 
@@ -64,11 +65,12 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, C
         logginUser = prefRepository.getLogginUser();
 
         if (logginUser != null) {
-            val cal: Calendar = Calendar.getInstance();
-            isValid = cal.timeInMillis < logginUser!!.expiredDate!!
-            if (!isValid) {
-                prefRepository.clearData()
-            }
+            isValid = true;
+//            val cal: Calendar = Calendar.getInstance();
+//            isValid = cal.timeInMillis < logginUser!!.expiredDate!!
+//            if (!isValid) {
+//                prefRepository.clearData()
+//            }
         }
 
         if (!isValid) {
@@ -106,14 +108,14 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, C
 
         intentFiltersArray = arrayOf(ndef)
         techListsArray = arrayOf(
-                arrayOf<String>(NfcA::class.java.name),
-                arrayOf<String>(NfcB::class.java.name),
-                arrayOf<String>(IsoDep::class.java.name),
-                arrayOf<String>(MifareClassic::class.java.name),
-                arrayOf<String>(NfcV::class.java.name),
-                arrayOf<String>(NfcF::class.java.name),
-                arrayOf<String>(NdefFormatable::class.java.name),
-                arrayOf<String>(MifareUltralight::class.java.name),
+            arrayOf<String>(NfcA::class.java.name),
+            arrayOf<String>(NfcB::class.java.name),
+            arrayOf<String>(IsoDep::class.java.name),
+            arrayOf<String>(MifareClassic::class.java.name),
+            arrayOf<String>(NfcV::class.java.name),
+            arrayOf<String>(NfcF::class.java.name),
+            arrayOf<String>(NdefFormatable::class.java.name),
+            arrayOf<String>(MifareUltralight::class.java.name),
         )
 
     }
@@ -158,26 +160,27 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, C
 
     // Embeds the child fragment dynamically
     private fun insertSuccessFragment() {
-        val childFragment = CheckinSuccessFragment.newInstance("You are in room: BA101", "14.00 PM 23 Apr, 2021")
+        val childFragment =
+            CheckinSuccessFragment.newInstance("You are in room: BA101", "14.00 PM 23 Apr, 2021")
 
         supportFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container_checkin, childFragment)
-                .commit()
+            .replace(R.id.fragment_container_checkin, childFragment)
+            .commit()
     }
 
     private fun insertFailureFragment() {
         val childFragment = CheckinFailureFragment.newInstance("Cannot connect. Please try again")
 
         supportFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container_checkin, childFragment)
-                .commit()
+            .replace(R.id.fragment_container_checkin, childFragment)
+            .commit()
     }
 
     private fun insertTodayClassesFragment() {
         val childFragment = TodayClassFragment.newInstance(1)
         supportFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container_checkin, childFragment)
-                .commit()
+            .replace(R.id.fragment_container_checkin, childFragment)
+            .commit()
     }
 
     private fun disableNfcForegroundDispatch() {
@@ -257,7 +260,11 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, C
 
 
                         for (ndefRecord in records) {
-                            if (ndefRecord.tnf == NdefRecord.TNF_WELL_KNOWN && Arrays.equals(ndefRecord.type, NdefRecord.RTD_TEXT)) {
+                            if (ndefRecord.tnf == NdefRecord.TNF_WELL_KNOWN && Arrays.equals(
+                                    ndefRecord.type,
+                                    NdefRecord.RTD_TEXT
+                                )
+                            ) {
                                 try {
                                     payload = readText(ndefRecord)
                                 } catch (e: UnsupportedEncodingException) {
@@ -273,19 +280,26 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, C
 
                         if (logginUser != null && logginUser!!.token != null) {
                             var attendance = Attendance(
-                                    logginUser!!.token!!,
-                                    logginUser!!.userID,
-                                    NfcUtils.getUID(intent),
-                                    Calendar.getInstance().timeInMillis.toString()
+                                logginUser!!.data.studentID,
+                                Calendar.getInstance().timeInMillis.toString(),
+                                NfcUtils.getUID(intent),
                             );
 
-                            val url: String = "https://recordattendance-1fa08-default-rtdb.firebaseio.com/orders/${logginUser!!.userID}.json?auth=${logginUser!!.token}";
+
+//                            {
+//                                "studentID": "23213",
+//                                "dateTime": "ml",
+//                                "nfcID": "nfcID"
+//                            }
+
+                            val url: String = "https://mobile-attendance-recorder.herokuapp.com/api/v1/checkIn";
+                            val token: String = logginUser!!.token;
 
                             Log.d(TAG, "requestURL: $url")
                             Log.d(TAG, "attendance: $attendance")
 
 
-                            checkinActivityViewModel.checkin(url, attendance)
+                            checkinActivityViewModel.checkin(url, token, attendance)
 
                             Log.d(TAG, "result in Activity: $result")
 
@@ -344,7 +358,12 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, C
         // e.g. "en"
 
         // Get the Text
-        return String(payload, languageCodeLength + 1, payload.size - languageCodeLength - 1, Charset.defaultCharset())
+        return String(
+            payload,
+            languageCodeLength + 1,
+            payload.size - languageCodeLength - 1,
+            Charset.defaultCharset()
+        )
     }
 
 

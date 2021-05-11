@@ -11,7 +11,6 @@ import com.katevu.attendance.data.model.Auth
 import com.katevu.attendance.data.model.User
 import com.katevu.attendance.network.LoginApi
 import kotlinx.coroutines.launch
-import java.util.*
 
 
 enum class LoginApiStatus { LOADING, ERROR, DONE }
@@ -28,14 +27,14 @@ class LoginViewModel() : ViewModel() {
     private val _auth = MutableLiveData<Auth>()
 
     // The external LiveData interface to the property is immutable, so only this class can modify
-    val auth: LiveData<Auth> = _auth
+//    val auth: LiveData<Auth> = _auth
 
 
     fun login(username: String, password: String) {
         // can be launched in a separate asynchronous job
 
         viewModelScope.launch {
-            val user = User(username, password, true)
+            val user = User(username, password)
             val response = LoginApi.retrofitService.login(user)
 
             val responseCode = response.code()
@@ -44,14 +43,10 @@ class LoginViewModel() : ViewModel() {
                 _loginResult.value =  LoginResult(null, responseCode)
             } else {
                 val result = response.body()
+//
+//                val cal: Calendar = Calendar.getInstance();
+//                cal.timeInMillis
 
-                val cal: Calendar = Calendar.getInstance();
-                cal.timeInMillis
-
-                if (result != null) {
-                    result.expiredDate = cal.timeInMillis + (result.expiresIn.toLong() * 10000)
-                }
-                _auth.value = result!!
                 _loginResult.value = LoginResult(result, null)
 
                 Log.d(TAG, "result: ${responseCode}")

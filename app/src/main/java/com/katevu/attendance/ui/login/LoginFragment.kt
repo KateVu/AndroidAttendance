@@ -14,7 +14,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import com.katevu.attendance.R
 import com.katevu.attendance.data.PrefRepo
-import com.katevu.attendance.data.model.Auth
+import com.katevu.attendance.data.model.LoggedInUser
 import com.katevu.attendance.databinding.FragmentLoginBinding
 import java.util.*
 
@@ -57,8 +57,9 @@ class LoginFragment : Fragment() {
         val logginUser = prefRepository.getLogginUser();
 
         if (logginUser != null) {
-            val cal: Calendar = Calendar.getInstance();
-            val isValid = if (cal.timeInMillis < logginUser.expiredDate!!) {true} else false
+//            val cal: Calendar = Calendar.getInstance();
+//            val isValid = if (cal.timeInMillis < logginUser.expiredDate!!) {true} else false
+            val isValid = true;
             if (isValid) {
                 callbacks?.loginSuccessful()
             } else {
@@ -132,8 +133,8 @@ class LoginFragment : Fragment() {
         }
     }
 
-    private fun updateUiWithUser(model: Auth) {
-        val welcome = getString(R.string.welcome) + model._userId
+    private fun updateUiWithUser(model: LoggedInUser) {
+        val welcome = getString(R.string.welcome) + model.data.studentID
         val appContext = context?.applicationContext ?: return
         Toast.makeText(appContext, welcome, Toast.LENGTH_LONG).show()
         callbacks?.loginSuccessful()

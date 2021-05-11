@@ -1,8 +1,21 @@
 package com.katevu.attendance.data.model
 
+//data class Attendance(
+//        var token: String,
+//        var userId: String?,
+//        var nfcId: String,
+//        var date: String,
+//)
+
 data class Attendance(
-        var token: String,
-        var userId: String?,
-        var nfcId: String,
-        var date: String,
+        var studentID: String,
+        var dateTime: String?,
+        var nfcID: String,
 )
+
+
+//{
+//        "studentID": "23213",
+//        "dateTime": "ml",
+//        "nfcID": "nfcID"
+//}
