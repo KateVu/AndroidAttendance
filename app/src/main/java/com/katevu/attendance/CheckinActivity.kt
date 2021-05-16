@@ -6,17 +6,20 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.nfc.*
 import android.nfc.tech.*
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import com.katevu.attendance.data.PrefRepo
 import com.katevu.attendance.data.model.Attendance
 import com.katevu.attendance.data.model.LoggedInUser
+import com.katevu.attendance.data.model.StudentActivity
 import com.katevu.attendance.ui.checkinresult.CheckinFailureFragment
 import com.katevu.attendance.ui.checkinresult.CheckinSuccessFragment
 import com.katevu.attendance.ui.classes.TodayClassFragment
@@ -24,13 +27,18 @@ import com.katevu.attendance.utils.NfcUtils
 import com.katevu.attendance.utils.WritableTag
 import java.io.UnsupportedEncodingException
 import java.nio.charset.Charset
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.experimental.and
 
 class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
-    CheckinFailureFragment.Callbacks {
+        CheckinFailureFragment.Callbacks {
 
     private val TAG = "CheckinActivity"
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
 
     private val checkinActivityViewModel: CheckinActivityViewModel by viewModels()
     private val prefRepository by lazy { PrefRepo(this) }
@@ -47,7 +55,11 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
     var logginUser: LoggedInUser? = null;
     var isValid: Boolean = false;
     var result: Boolean = false;
+    var activity: StudentActivity? = null
+    var errorMessage: String = "Cannot connect. Please try again"
 
+    //list activity
+    private var _listActivites: List<StudentActivity>? = mutableListOf()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,15 +91,38 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
             showToast("Please log in first")
         };
 
-        checkinActivityViewModel.checkinResult.observe(this, androidx.lifecycle.Observer {
-            if (it) {
-                Log.d(TAG, "Check in result: $result");
-                insertSuccessFragment()
-            } else {
-                Log.d(TAG, "Check in failure");
-                insertFailureFragment()
+//        checkinActivityViewModel.checkinResult.observe(this, androidx.lifecycle.Observer {
+//            if (it) {
+//                Log.d(TAG, "Check in result: $result");
+//                insertSuccessFragment("Location", "13PM")
+//            } else {
+//                Log.d(TAG, "Check in failure");
+//                insertFailureFragment()
+//            }
+//        })
+
+        checkinActivityViewModel.checkinResult1.observe(this, androidx.lifecycle.Observer { checkinResult ->
+            checkinResult.error?.let {
+                insertFailureFragment(errorMessage)
+            }
+            checkinResult.success?.let {
+                if (this.activity != null) {
+                    insertSuccessFragment("Location: " + this.activity!!.roomId, "Check in at: " + it.date)
+                } else {
+                    insertSuccessFragment(this.activity!!.roomId, it.date)
+                }
+
             }
         })
+
+        checkinActivityViewModel.getActivitiesResult.observe(
+                this,
+                { getActivityResult ->
+                    getActivityResult.success?.let {
+                        _listActivites = it.data
+                    }
+                }
+        )
 
         initNfcAdapter()
 
@@ -108,14 +143,14 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
 
         intentFiltersArray = arrayOf(ndef)
         techListsArray = arrayOf(
-            arrayOf<String>(NfcA::class.java.name),
-            arrayOf<String>(NfcB::class.java.name),
-            arrayOf<String>(IsoDep::class.java.name),
-            arrayOf<String>(MifareClassic::class.java.name),
-            arrayOf<String>(NfcV::class.java.name),
-            arrayOf<String>(NfcF::class.java.name),
-            arrayOf<String>(NdefFormatable::class.java.name),
-            arrayOf<String>(MifareUltralight::class.java.name),
+                arrayOf<String>(NfcA::class.java.name),
+                arrayOf<String>(NfcB::class.java.name),
+                arrayOf<String>(IsoDep::class.java.name),
+                arrayOf<String>(MifareClassic::class.java.name),
+                arrayOf<String>(NfcV::class.java.name),
+                arrayOf<String>(NfcF::class.java.name),
+                arrayOf<String>(NdefFormatable::class.java.name),
+                arrayOf<String>(MifareUltralight::class.java.name),
         )
 
     }
@@ -159,28 +194,28 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
     }
 
     // Embeds the child fragment dynamically
-    private fun insertSuccessFragment() {
+    private fun insertSuccessFragment(location: String, date: String) {
         val childFragment =
-            CheckinSuccessFragment.newInstance("You are in room: BA101", "14.00 PM 23 Apr, 2021")
+                CheckinSuccessFragment.newInstance(location, date)
 
         supportFragmentManager.beginTransaction()
-            .replace(R.id.fragment_container_checkin, childFragment)
-            .commit()
+                .replace(R.id.fragment_container_checkin, childFragment)
+                .commit()
     }
 
-    private fun insertFailureFragment() {
-        val childFragment = CheckinFailureFragment.newInstance("Cannot connect. Please try again")
+    private fun insertFailureFragment(errorMessage: String) {
+        val childFragment = CheckinFailureFragment.newInstance(errorMessage)
 
         supportFragmentManager.beginTransaction()
-            .replace(R.id.fragment_container_checkin, childFragment)
-            .commit()
+                .replace(R.id.fragment_container_checkin, childFragment)
+                .commit()
     }
 
     private fun insertTodayClassesFragment() {
         val childFragment = TodayClassFragment.newInstance(1)
         supportFragmentManager.beginTransaction()
-            .replace(R.id.fragment_container_checkin, childFragment)
-            .commit()
+                .replace(R.id.fragment_container_checkin, childFragment)
+                .commit()
     }
 
     private fun disableNfcForegroundDispatch() {
@@ -202,6 +237,7 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
 
@@ -225,6 +261,7 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun handleIntent(intent: Intent?) {
 
         if (intent != null) {
@@ -261,9 +298,9 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
 
                         for (ndefRecord in records) {
                             if (ndefRecord.tnf == NdefRecord.TNF_WELL_KNOWN && Arrays.equals(
-                                    ndefRecord.type,
-                                    NdefRecord.RTD_TEXT
-                                )
+                                            ndefRecord.type,
+                                            NdefRecord.RTD_TEXT
+                                    )
                             ) {
                                 try {
                                     payload = readText(ndefRecord)
@@ -277,35 +314,49 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
 
                     if (payload != null) {
                         onTagTapped(NfcUtils.getUID(intent), payload)
+                        var nfcId = NfcUtils.getUID(intent)
 
                         if (logginUser != null && logginUser!!.token != null) {
-                            var attendance = Attendance(
-                                logginUser!!.data.studentID,
-                                Calendar.getInstance().timeInMillis.toString(),
-                                NfcUtils.getUID(intent),
-                            );
+
+//                            "startTime": "2021-10-05T12:48:00.000Z",
+                            this.activity = getActivityId(nfcId)
+
+//                            this.activity = getActivityId("enab101nfc")
+
+                            if (activity == null) {
+                                insertFailureFragment("Please check your location and time again!")
+                            } else {
+                                val date = LocalDateTime.now()
+                                val text = date.format(formatter)
+                                val parsedDate = LocalDateTime.parse(text, formatter)
 
 
-//                            {
-//                                "studentID": "23213",
-//                                "dateTime": "ml",
-//                                "nfcID": "nfcID"
-//                            }
+                                var attendance = Attendance(
+                                        logginUser!!.data.studentID,
+                                        text,
+//                                Calendar.getInstance().timeInMillis.toString(),
+                                        NfcUtils.getUID(intent),
+                                        this.activity!!.id
+                                );
 
-                            val url: String = "https://mobile-attendance-recorder.herokuapp.com/api/v1/checkIn";
-                            val token: String = logginUser!!.token;
+                                val url: String = "https://mobile-attendance-recorder.herokuapp.com/api/v1/checkIn";
+                                val token: String = logginUser!!.token;
 
-                            Log.d(TAG, "requestURL: $url")
-                            Log.d(TAG, "attendance: $attendance")
+                                Log.d(TAG, "requestURL: $url")
+                                Log.d(TAG, "attendance: $attendance")
+
+//                            getActivityId(nfcId)
+                                checkinActivityViewModel.checkin(url, token, attendance)
+
+                                Log.d(TAG, "result in Activity: $result")
+
+                                val test = checkinActivityViewModel.result
+
+                                Log.d(TAG, "test result in Activity: $test")
 
 
-                            checkinActivityViewModel.checkin(url, token, attendance)
+                            }
 
-                            Log.d(TAG, "result in Activity: $result")
-
-                            val test = checkinActivityViewModel.result
-
-                            Log.d(TAG, "test result in Activity: $test")
 
 //                            if (test) {
 //                                Log.d(TAG, "Check in result: $result")
@@ -359,10 +410,10 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
 
         // Get the Text
         return String(
-            payload,
-            languageCodeLength + 1,
-            payload.size - languageCodeLength - 1,
-            Charset.defaultCharset()
+                payload,
+                languageCodeLength + 1,
+                payload.size - languageCodeLength - 1,
+                Charset.defaultCharset()
         )
     }
 
@@ -379,5 +430,55 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
         insertTodayClassesFragment()
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun getActivityId(nfcId: String): StudentActivity? {
+        Log.d(TAG, "Call get activitieID with param ${nfcId}")
+
+        Log.d(TAG, "Call get activitieID with data: $_listActivites")
+
+        _listActivites.let {
+
+            var date: LocalDateTime = LocalDateTime.now()
+            val result: List<StudentActivity>? = it?.filter { item -> item.nfcId == nfcId && LocalDateTime.parse(item.startTime, formatter).minusMinutes(30).isBefore(date) && date.isBefore(LocalDateTime.parse(item.endTime, formatter))}
+
+//            val result: List<StudentActivity>? = it?.filter { item -> item.nfcId == nfcId }
+            Log.d(TAG, "Call get activitieID with result: ${result}")
+
+
+//            var checkdate1 = LocalDateTime.parse(result?.first()?.startTime, formatter).isBefore(date);
+//            Log.d(TAG, "Check start time: ${LocalDateTime.parse(result?.first()?.startTime, formatter)}")
+//            Log.d(TAG, "Check current time: ${date}")
+//            Log.d(TAG, "Check compare time: ${LocalDateTime.parse(result?.first()?.startTime, formatter).isBefore(date)}")
+
+
+            if (result.isNullOrEmpty()) {
+                Log.d(TAG, "You do not have any class at the moment!")
+                return null
+            } else {
+                Log.d(TAG, "Call get activitieID with id: ${result}")
+
+                for (item in result) {
+                    Log.d(TAG, "CHECK DATE FOR ITEM: ${item}")
+
+                    var checkdate1 = LocalDateTime.parse(item.startTime, formatter).isBefore(date);
+                    Log.d(TAG, "Check start time: ${LocalDateTime.parse(item.startTime, formatter)}")
+                    Log.d(TAG, "Check current time: ${date}")
+                    Log.d(TAG, "Check compare time: ${checkdate1}")
+
+                    var checkdate2 = date.isBefore(LocalDateTime.parse(item.endTime, formatter))
+                    Log.d(TAG, "Check end time: ${LocalDateTime.parse(item.endTime, formatter)}")
+                    Log.d(TAG, "Check current time: ${date}")
+                    Log.d(TAG, "Check compare end time: ${checkdate2}")
+                }
+
+
+
+                return result.first()
+
+            }
+        }
+
+        return null
+    }
 
 }

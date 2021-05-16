@@ -13,12 +13,11 @@ data class LoggedInUser(
 
 data class UserData(
         val isEmailVerified: Boolean,
-        val units: List<Unit>,
+        val units: List<String>,
         @Json(name = "_id")
         val id: String,
         val studentID: String,
 )
-
 
 data class Unit(
         val id: String,

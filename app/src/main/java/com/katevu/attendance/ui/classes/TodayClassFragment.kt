@@ -4,13 +4,15 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.katevu.attendance.CheckinActivityViewModel
 import com.katevu.attendance.R
-import com.katevu.attendance.data.model.MyClass
+import com.katevu.attendance.data.model.StudentActivity
 
 /**
  * A fragment representing a list of Items.
@@ -18,7 +20,7 @@ import com.katevu.attendance.data.model.MyClass
 class TodayClassFragment : Fragment() {
 
     private var columnCount = 1
-    private val todayClassViewModel: TodayClassViewModel by viewModels()
+    private val todayClassViewModel: CheckinActivityViewModel by activityViewModels()
     private lateinit var todayClassRecyclerView: RecyclerView
     private var adapter: TodayClassRecyclerViewAdapter? = null
 
@@ -59,10 +61,16 @@ class TodayClassFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        todayClassViewModel.getClasses()
-        todayClassViewModel.todayclasses.observe(
+        todayClassViewModel.getActivitiesResult.observe(
                 viewLifecycleOwner,
-                {listclasses -> updateUI(listclasses)}
+                {getActivityResult ->
+                    getActivityResult.error?.let {
+                        showLoginFailed(it.toString())
+                    }
+                    getActivityResult.success?.let {
+                        updateUI(it.data)
+                    }
+                }
         )
 
 //        bookListViewModel.allBooks()
@@ -71,10 +79,15 @@ class TodayClassFragment : Fragment() {
 //                { listBooks -> updateUI(listBooks) })
     }
 
+    private fun showLoginFailed(errorString: String) {
+        val appContext = context?.applicationContext ?: return
+        Toast.makeText(appContext, errorString, Toast.LENGTH_LONG).show()
+    }
 
-    private fun updateUI(classes: List<MyClass>) {
 
-        adapter = TodayClassRecyclerViewAdapter(classes)
+    private fun updateUI(studentActivities: List<StudentActivity>) {
+
+        adapter = TodayClassRecyclerViewAdapter(studentActivities)
         todayClassRecyclerView.adapter = adapter
 //        Log.d(TAG, ".updateUI called")
 //        adapter = BookListAdapter(books)
