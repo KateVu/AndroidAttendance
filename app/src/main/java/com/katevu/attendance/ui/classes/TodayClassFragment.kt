@@ -82,7 +82,7 @@ class TodayClassFragment : Fragment() {
                     }
                     getActivityResult.success?.let {
                         if (it.data.isEmpty()) {
-                            showToast("You do not have any class")
+                            showToast("You do not have any class today")
                         } else {
                             updateUI(it.data)
                         }

@@ -1,18 +1,24 @@
 package com.katevu.attendance
 
+import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import android.nfc.*
 import android.nfc.tech.*
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
+import android.telephony.TelephonyManager
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
+import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
@@ -34,6 +40,7 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.experimental.and
 
+
 class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
         CheckinFailureFragment.Callbacks {
 
@@ -48,10 +55,15 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
     //init for NFC
     private var adapter: NfcAdapter? = null
     private var pendingIntent: PendingIntent? = null
+    private var spinner: ProgressBar? = null
     private var intentFiltersArray: Array<IntentFilter> = arrayOf()
     private var techListsArray: Array<Array<String>> = arrayOf(arrayOf())
     var tag: WritableTag? = null
     var tagId: String? = null
+
+//    private var telephonyManager: TelephonyManager? = null
+    private var telephoneId: String? = null
+
 
     //init for submit data
     var logginUser: LoggedInUser? = null;
@@ -69,6 +81,7 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_checkin)
         val toolbar: Toolbar = findViewById(R.id.toolbar)
+        spinner = findViewById<ProgressBar>(R.id.spinner)
         setSupportActionBar(toolbar)
 
         val isFragmentContainerEmpty = savedInstanceState == null
@@ -98,7 +111,11 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
         val cm = this.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         activeNetwork = cm.activeNetworkInfo
         isConnected = activeNetwork?.isConnectedOrConnecting == true
-
+//        telephonyManager = this.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+        var imei: String? = ""
+        imei = getIMEIDeviceId(this)
+        showToast("IMEI: $imei")
+        Log.d(TAG, "ANDROI ID: $imei")
 
 //        checkinActivityViewModel.checkinResult.observe(this, androidx.lifecycle.Observer {
 //            if (it) {
@@ -111,6 +128,7 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
 //        })
 
         checkinActivityViewModel.checkinResult1.observe(this, androidx.lifecycle.Observer { checkinResult ->
+            spinner?.visibility = View.GONE
             checkinResult.error?.let {
                 insertFailureFragment(errorMessage)
             }
@@ -127,6 +145,7 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
         checkinActivityViewModel.getActivitiesResult.observe(
                 this,
                 { getActivityResult ->
+                    spinner?.visibility = View.GONE
                     getActivityResult.success?.let {
                         _listActivites = it.data
                     }
@@ -357,6 +376,7 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
 
 //                            getActivityId(nfcId)
                                 if (isConnected) {
+                                    spinner?.visibility = View.VISIBLE
                                     checkinActivityViewModel.checkin(url, token, attendance)
 
 //                                Log.d(TAG, "result in Activity: $result")
@@ -494,6 +514,33 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
         }
 
         return null
+    }
+
+    fun getIMEIDeviceId(context: Context): String? {
+        val deviceId: String
+        deviceId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            Log.d(TAG, "Get Android ID")
+            Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+        } else {
+            val mTelephony = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (context.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+                    return ""
+                }
+            }
+            assert(mTelephony != null)
+            if (mTelephony.deviceId != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    mTelephony.imei
+                } else {
+                    mTelephony.deviceId
+                }
+            } else {
+                Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+            }
+        }
+        Log.d("deviceId", deviceId)
+        return deviceId
     }
 
 }

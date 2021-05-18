@@ -5,13 +5,9 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.katevu.attendance.R
-import com.katevu.attendance.data.model.Auth
 import com.katevu.attendance.data.model.User
 import com.katevu.attendance.network.LoginApi
 import kotlinx.coroutines.launch
-
-
-enum class LoginApiStatus { LOADING, ERROR, DONE }
 
 class LoginViewModel() : ViewModel() {
 
@@ -22,11 +18,6 @@ class LoginViewModel() : ViewModel() {
 
     private val _loginResult = MutableLiveData<LoginResult>()
     val loginResult: LiveData<LoginResult> = _loginResult
-    private val _auth = MutableLiveData<Auth>()
-
-    // The external LiveData interface to the property is immutable, so only this class can modify
-//    val auth: LiveData<Auth> = _auth
-
 
     fun login(username: String, password: String) {
         // can be launched in a separate asynchronous job

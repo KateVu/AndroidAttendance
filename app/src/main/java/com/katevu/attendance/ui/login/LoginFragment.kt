@@ -95,6 +95,7 @@ class LoginFragment : Fragment() {
                 Observer { loginResult ->
                     loginResult ?: return@Observer
                     binding.loading.visibility = View.GONE
+
                     loginResult.error?.let {
                         showLoginFailed(it.toString())
                     }
