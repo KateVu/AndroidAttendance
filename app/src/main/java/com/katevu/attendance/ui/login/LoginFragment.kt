@@ -1,9 +1,12 @@
 package com.katevu.attendance.ui.login
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkInfo
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -20,6 +23,8 @@ import java.util.*
 
 
 class LoginFragment : Fragment() {
+
+    private val TAG = "LoginFragment"
 
     interface Callbacks {
         fun loginSuccessful()
@@ -42,9 +47,9 @@ class LoginFragment : Fragment() {
     }
 
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
+            inflater: LayoutInflater,
+            container: ViewGroup?,
+            savedInstanceState: Bundle?,
     ): View? {
 
         binding = FragmentLoginBinding.inflate(inflater, container, false);
@@ -53,6 +58,11 @@ class LoginFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        val cm = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val activeNetwork: NetworkInfo? = cm.activeNetworkInfo
+        val isConnected: Boolean = activeNetwork?.isConnectedOrConnecting == true
+
 
         val logginUser = prefRepository.getLogginUser();
 
@@ -68,33 +78,39 @@ class LoginFragment : Fragment() {
         }
 
         loginViewModel.loginFormState.observe(viewLifecycleOwner,
-            Observer { loginFormState ->
-                if (loginFormState == null) {
-                    return@Observer
-                }
-                binding.login.isEnabled = loginFormState.isDataValid
-                loginFormState.usernameError?.let {
-                    binding.username.error = getString(it)
-                }
-                loginFormState.passwordError?.let {
-                    binding.password.error = getString(it)
-                }
-            })
+                Observer { loginFormState ->
+                    if (loginFormState == null) {
+                        return@Observer
+                    }
+                    binding.login.isEnabled = loginFormState.isDataValid
+                    loginFormState.usernameError?.let {
+                        binding.username.error = getString(it)
+                    }
+                    loginFormState.passwordError?.let {
+                        binding.password.error = getString(it)
+                    }
+                })
 
         loginViewModel.loginResult.observe(viewLifecycleOwner,
-            Observer { loginResult ->
-                loginResult ?: return@Observer
-                binding.loading.visibility = View.GONE
-                loginResult.error?.let {
-                    showLoginFailed(it.toString())
-                }
-                loginResult.success?.let {
-                    //To set the value
+                Observer { loginResult ->
+                    loginResult ?: return@Observer
+                    binding.loading.visibility = View.GONE
+                    loginResult.error?.let {
+                        showLoginFailed(it.toString())
+                    }
+                    loginResult.success?.let {
+                        //To set the value
 //                    prefRepository.setLoggedIn(true)
-                    prefRepository.setLogginUser(it)
-                    updateUiWithUser(it)
-                }
-            })
+                        prefRepository.setLogginUser(it)
+                        updateUiWithUser(it)
+                    }
+                })
+
+        if (isConnected) {
+            Log.d(TAG, "network work");
+        } else {
+            Log.d(TAG, "network does not work");
+        }
 
         val afterTextChangedListener = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
@@ -107,8 +123,8 @@ class LoginFragment : Fragment() {
 
             override fun afterTextChanged(s: Editable) {
                 loginViewModel.loginDataChanged(
-                    binding.username.text.toString(),
-                    binding.password.text.toString()
+                        binding.username.text.toString(),
+                        binding.password.text.toString()
                 )
             }
         }
@@ -117,19 +133,24 @@ class LoginFragment : Fragment() {
         binding.password.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
                 loginViewModel.login(
-                    binding.username.text.toString(),
-                    binding.password.text.toString()
-                )
+                        binding.username.text.toString(),
+                        binding.password.text.toString())
+
             }
             false
         }
 
         binding.login.setOnClickListener {
-            binding.loading.visibility = View.VISIBLE
-            loginViewModel.login(
-                binding.username.text.toString(),
-                binding.password.text.toString()
-            )
+
+            if (!isConnected) {
+                showLoginFailed("There is no internet access!!!!")
+            } else {
+                binding.loading.visibility = View.VISIBLE
+                loginViewModel.login(
+                        binding.username.text.toString(),
+                        binding.password.text.toString()
+                )
+            }
         }
     }
 
@@ -149,7 +170,7 @@ class LoginFragment : Fragment() {
     companion object {
         fun newInstance(): LoginFragment {
             return LoginFragment()
-            }
         }
+    }
 
 }
