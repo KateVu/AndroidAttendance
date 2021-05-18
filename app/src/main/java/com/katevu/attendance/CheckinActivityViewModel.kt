@@ -72,7 +72,7 @@ class CheckinActivityViewModel: ViewModel() {
     }
 
     init {
-        getActivities()
+//        getActivities()
     }
 
     fun checkin(url: String, token: String, attendance: Attendance) {

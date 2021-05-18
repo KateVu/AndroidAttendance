@@ -4,6 +4,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.ConnectivityManager
+import android.net.NetworkInfo
 import android.nfc.*
 import android.nfc.tech.*
 import android.os.Build
@@ -57,6 +59,8 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
     var result: Boolean = false;
     var activity: StudentActivity? = null
     var errorMessage: String = "Cannot connect. Please try again"
+    var activeNetwork: NetworkInfo? = null
+    var isConnected: Boolean = false;
 
     //list activity
     private var _listActivites: List<StudentActivity>? = mutableListOf()
@@ -90,6 +94,11 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
             startActivity(intent)
             showToast("Please log in first")
         };
+
+        val cm = this.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        activeNetwork = cm.activeNetworkInfo
+        isConnected = activeNetwork?.isConnectedOrConnecting == true
+
 
 //        checkinActivityViewModel.checkinResult.observe(this, androidx.lifecycle.Observer {
 //            if (it) {
@@ -274,10 +283,11 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
                 return
             }
             tagId = tag!!.tagId
-            Log.d(TAG, "$tagId")
+//            Log.d(TAG, "$tagId")
 //            showToast("Tag tapped: $tagId")
 
             val action = intent.action
+
 
 
             if (NfcAdapter.ACTION_NDEF_DISCOVERED == action) {
@@ -313,7 +323,7 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
                     }
 
                     if (payload != null) {
-                        onTagTapped(NfcUtils.getUID(intent), payload)
+//                        onTagTapped(NfcUtils.getUID(intent), payload)
                         var nfcId = NfcUtils.getUID(intent)
 
                         if (logginUser != null && logginUser!!.token != null) {
@@ -342,28 +352,23 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
                                 val url: String = "https://mobile-attendance-recorder.herokuapp.com/api/v1/checkIn";
                                 val token: String = logginUser!!.token;
 
-                                Log.d(TAG, "requestURL: $url")
-                                Log.d(TAG, "attendance: $attendance")
+//                                Log.d(TAG, "requestURL: $url")
+//                                Log.d(TAG, "attendance: $attendance")
 
 //                            getActivityId(nfcId)
-                                checkinActivityViewModel.checkin(url, token, attendance)
+                                if (isConnected) {
+                                    checkinActivityViewModel.checkin(url, token, attendance)
 
-                                Log.d(TAG, "result in Activity: $result")
+//                                Log.d(TAG, "result in Activity: $result")
 
-                                val test = checkinActivityViewModel.result
+                                    val test = checkinActivityViewModel.result
 
-                                Log.d(TAG, "test result in Activity: $test")
+//                                Log.d(TAG, "test result in Activity: $test")
 
-
+                                } else {
+                                    showToast("No internet access!!")
+                                }
                             }
-
-
-//                            if (test) {
-//                                Log.d(TAG, "Check in result: $result")
-//                                callbacks?.submitSuccessful()
-//                            } else {
-//                                callbacks?.submitFailure()
-//                            }
                         }
 
 
@@ -439,7 +444,7 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
         _listActivites.let {
 
             var date: LocalDateTime = LocalDateTime.now()
-            val result: List<StudentActivity>? = it?.filter { item -> item.nfcId == nfcId && LocalDateTime.parse(item.startTime, formatter).minusMinutes(30).isBefore(date) && date.isBefore(LocalDateTime.parse(item.endTime, formatter))}
+            val result: List<StudentActivity>? = it?.filter { item -> item.nfcId == nfcId && LocalDateTime.parse(item.startTime, formatter).minusMinutes(30).isBefore(date) && date.isBefore(LocalDateTime.parse(item.endTime, formatter)) }
 
 //            val result: List<StudentActivity>? = it?.filter { item -> item.nfcId == nfcId }
             Log.d(TAG, "Call get activitieID with result: ${result}")
@@ -452,7 +457,17 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
 
 
             if (result.isNullOrEmpty()) {
-                Log.d(TAG, "You do not have any class at the moment!")
+                isConnected = activeNetwork?.isConnectedOrConnecting == true
+
+                var value = activeNetwork?.isConnectedOrConnecting
+                showToast("Internet value: $value")
+
+                if (!isConnected) {
+                    showToast("No internet access!!!")
+                } else {
+                    showToast("You do not have any class at the moment!")
+                }
+//                Log.d(TAG, "You do not have any class at the moment!")
                 return null
             } else {
                 Log.d(TAG, "Call get activitieID with id: ${result}")
@@ -461,14 +476,14 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
                     Log.d(TAG, "CHECK DATE FOR ITEM: ${item}")
 
                     var checkdate1 = LocalDateTime.parse(item.startTime, formatter).isBefore(date);
-                    Log.d(TAG, "Check start time: ${LocalDateTime.parse(item.startTime, formatter)}")
-                    Log.d(TAG, "Check current time: ${date}")
-                    Log.d(TAG, "Check compare time: ${checkdate1}")
-
-                    var checkdate2 = date.isBefore(LocalDateTime.parse(item.endTime, formatter))
-                    Log.d(TAG, "Check end time: ${LocalDateTime.parse(item.endTime, formatter)}")
-                    Log.d(TAG, "Check current time: ${date}")
-                    Log.d(TAG, "Check compare end time: ${checkdate2}")
+//                    Log.d(TAG, "Check start time: ${LocalDateTime.parse(item.startTime, formatter)}")
+//                    Log.d(TAG, "Check current time: ${date}")
+//                    Log.d(TAG, "Check compare time: ${checkdate1}")
+//
+//                    var checkdate2 = date.isBefore(LocalDateTime.parse(item.endTime, formatter))
+//                    Log.d(TAG, "Check end time: ${LocalDateTime.parse(item.endTime, formatter)}")
+//                    Log.d(TAG, "Check current time: ${date}")
+//                    Log.d(TAG, "Check compare end time: ${checkdate2}")
                 }
 
 

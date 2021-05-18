@@ -1,7 +1,5 @@
 package com.katevu.attendance.ui.login
 
-import android.util.Log
-import android.util.Patterns
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -41,6 +39,7 @@ class LoginViewModel() : ViewModel() {
 
             if (responseCode != 200) {
                 _loginResult.value =  LoginResult(null, responseCode)
+//                Log.d(TAG, "Login fail")
             } else {
                 val result = response.body()
 //
@@ -48,18 +47,12 @@ class LoginViewModel() : ViewModel() {
 //                cal.timeInMillis
 
                 _loginResult.value = LoginResult(result, null)
-
-                Log.d(TAG, "result: ${responseCode}")
-
-                Log.d(TAG, "result: ${result}")
+//                Log.d(TAG, "result: ${responseCode}")
+//
+//                Log.d(TAG, "result: ${result}")
             }
 
         }
-    }
-
-    fun autoLogin() {
-
-
     }
 
     fun loginDataChanged(username: String, password: String) {
@@ -74,11 +67,7 @@ class LoginViewModel() : ViewModel() {
 
     // A placeholder username validation check
     private fun isUserNameValid(username: String): Boolean {
-        return if (username.contains("@")) {
-            Patterns.EMAIL_ADDRESS.matcher(username).matches()
-        } else {
-            username.isNotBlank()
-        }
+        return username.isNotBlank()
     }
 
     // A placeholder password validation check

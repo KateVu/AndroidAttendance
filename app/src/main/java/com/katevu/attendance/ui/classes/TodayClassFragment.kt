@@ -1,5 +1,8 @@
 package com.katevu.attendance.ui.classes
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkInfo
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -45,6 +48,16 @@ class TodayClassFragment : Fragment() {
             else -> GridLayoutManager(context, columnCount)
         }
 
+        val cm = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val activeNetwork: NetworkInfo? = cm.activeNetworkInfo
+        val isConnected: Boolean = activeNetwork?.isConnectedOrConnecting == true
+
+        if (isConnected) {
+            todayClassViewModel.getActivities();
+        } else {
+            showToast("No internet access")
+        }
+
         // Set the adapter
 //        if (view is RecyclerView) {
 //            with(view) {
@@ -68,7 +81,11 @@ class TodayClassFragment : Fragment() {
                         showLoginFailed(it.toString())
                     }
                     getActivityResult.success?.let {
-                        updateUI(it.data)
+                        if (it.data.isEmpty()) {
+                            showToast("You do not have any class")
+                        } else {
+                            updateUI(it.data)
+                        }
                     }
                 }
         )
@@ -87,12 +104,25 @@ class TodayClassFragment : Fragment() {
 
     private fun updateUI(studentActivities: List<StudentActivity>) {
 
+//        list_view.setAdapter(adapter);
+//        if (adapter.getCount() > 0) {
+//
+//        } else {
+//            Toast.makeText(getApplicationContext(), "NO Data Available..", Toast.LENGTH_SHORT).show();
+//        }
+
         adapter = TodayClassRecyclerViewAdapter(studentActivities)
         todayClassRecyclerView.adapter = adapter
 //        Log.d(TAG, ".updateUI called")
 //        adapter = BookListAdapter(books)
 //        bookRecyclerView.adapter = adapter
     }
+
+    fun showToast(message: String) {
+        val appContext = context?.applicationContext ?: return
+        Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show()
+    }
+
 
     companion object {
 
