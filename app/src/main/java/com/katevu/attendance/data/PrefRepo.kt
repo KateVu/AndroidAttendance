@@ -7,7 +7,7 @@ import PREF_SHARE_MESSAGE
 import android.content.Context
 import android.content.SharedPreferences
 import com.google.gson.Gson
-import com.katevu.attendance.data.model.Auth
+import com.katevu.attendance.data.model.LoggedInUser
 
 
 class PrefRepo(val context: Context) {
@@ -64,11 +64,11 @@ class PrefRepo(val context: Context) {
     }
 
 
-    fun setLogginUser(user: Auth) {
+    fun setLogginUser(user: LoggedInUser) {
         var jsonString: String = gson.toJson(user);
         PREF_LOGGED_USER.put(jsonString);
     }
 
-    fun getLogginUser() = gson.fromJson<Auth>(PREF_LOGGED_USER.getString(), Auth::class.java)
+    fun getLogginUser() = gson.fromJson<LoggedInUser>(PREF_LOGGED_USER.getString(), LoggedInUser::class.java)
 
 }

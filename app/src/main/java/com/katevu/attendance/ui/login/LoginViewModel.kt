@@ -1,20 +1,13 @@
 package com.katevu.attendance.ui.login
 
-import android.util.Log
-import android.util.Patterns
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.katevu.attendance.R
-import com.katevu.attendance.data.model.Auth
 import com.katevu.attendance.data.model.User
 import com.katevu.attendance.network.LoginApi
 import kotlinx.coroutines.launch
-import java.util.*
-
-
-enum class LoginApiStatus { LOADING, ERROR, DONE }
 
 class LoginViewModel() : ViewModel() {
 
@@ -25,46 +18,32 @@ class LoginViewModel() : ViewModel() {
 
     private val _loginResult = MutableLiveData<LoginResult>()
     val loginResult: LiveData<LoginResult> = _loginResult
-    private val _auth = MutableLiveData<Auth>()
-
-    // The external LiveData interface to the property is immutable, so only this class can modify
-    val auth: LiveData<Auth> = _auth
-
 
     fun login(username: String, password: String) {
         // can be launched in a separate asynchronous job
 
         viewModelScope.launch {
-            val user = User(username, password, true)
+            val user = User(username, password)
             val response = LoginApi.retrofitService.login(user)
 
             val responseCode = response.code()
 
             if (responseCode != 200) {
                 _loginResult.value =  LoginResult(null, responseCode)
+//                Log.d(TAG, "Login fail")
             } else {
                 val result = response.body()
+//
+//                val cal: Calendar = Calendar.getInstance();
+//                cal.timeInMillis
 
-                val cal: Calendar = Calendar.getInstance();
-                cal.timeInMillis
-
-                if (result != null) {
-                    result.expiredDate = cal.timeInMillis + (result.expiresIn.toLong() * 10000)
-                }
-                _auth.value = result!!
                 _loginResult.value = LoginResult(result, null)
-
-                Log.d(TAG, "result: ${responseCode}")
-
-                Log.d(TAG, "result: ${result}")
+//                Log.d(TAG, "result: ${responseCode}")
+//
+//                Log.d(TAG, "result: ${result}")
             }
 
         }
-    }
-
-    fun autoLogin() {
-
-
     }
 
     fun loginDataChanged(username: String, password: String) {
@@ -79,11 +58,7 @@ class LoginViewModel() : ViewModel() {
 
     // A placeholder username validation check
     private fun isUserNameValid(username: String): Boolean {
-        return if (username.contains("@")) {
-            Patterns.EMAIL_ADDRESS.matcher(username).matches()
-        } else {
-            username.isNotBlank()
-        }
+        return username.isNotBlank()
     }
 
     // A placeholder password validation check

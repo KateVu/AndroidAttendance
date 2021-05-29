@@ -1,22 +1,33 @@
 package com.katevu.attendance
 
+import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.NetworkInfo
 import android.nfc.*
 import android.nfc.tech.*
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
+import android.telephony.TelephonyManager
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
+import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import com.katevu.attendance.data.PrefRepo
 import com.katevu.attendance.data.model.Attendance
-import com.katevu.attendance.data.model.Auth
+import com.katevu.attendance.data.model.LoggedInUser
+import com.katevu.attendance.data.model.StudentActivity
 import com.katevu.attendance.ui.checkinresult.CheckinFailureFragment
 import com.katevu.attendance.ui.checkinresult.CheckinSuccessFragment
 import com.katevu.attendance.ui.classes.TodayClassFragment
@@ -24,12 +35,19 @@ import com.katevu.attendance.utils.NfcUtils
 import com.katevu.attendance.utils.WritableTag
 import java.io.UnsupportedEncodingException
 import java.nio.charset.Charset
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.experimental.and
 
-class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, CheckinFailureFragment.Callbacks {
+
+class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
+        CheckinFailureFragment.Callbacks {
 
     private val TAG = "CheckinActivity"
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
 
     private val checkinActivityViewModel: CheckinActivityViewModel by viewModels()
     private val prefRepository by lazy { PrefRepo(this) }
@@ -37,21 +55,34 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, C
     //init for NFC
     private var adapter: NfcAdapter? = null
     private var pendingIntent: PendingIntent? = null
+    private var spinner: ProgressBar? = null
     private var intentFiltersArray: Array<IntentFilter> = arrayOf()
     private var techListsArray: Array<Array<String>> = arrayOf(arrayOf())
     var tag: WritableTag? = null
     var tagId: String? = null
+    var phoneId: String? = ""
+
+//    private var telephonyManager: TelephonyManager? = null
+    private var telephoneId: String? = null
+
 
     //init for submit data
-    var logginUser: Auth? = null;
+    var logginUser: LoggedInUser? = null;
     var isValid: Boolean = false;
     var result: Boolean = false;
+    var activity: StudentActivity? = null
+    var errorMessage: String = "Cannot connect. Please try again"
+    var activeNetwork: NetworkInfo? = null
+    var isConnected: Boolean = false;
 
+    //list activity
+    private var _listActivites: List<StudentActivity>? = mutableListOf()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_checkin)
         val toolbar: Toolbar = findViewById(R.id.toolbar)
+        spinner = findViewById<ProgressBar>(R.id.spinner)
         setSupportActionBar(toolbar)
 
         val isFragmentContainerEmpty = savedInstanceState == null
@@ -64,11 +95,12 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, C
         logginUser = prefRepository.getLogginUser();
 
         if (logginUser != null) {
-            val cal: Calendar = Calendar.getInstance();
-            isValid = cal.timeInMillis < logginUser!!.expiredDate!!
-            if (!isValid) {
-                prefRepository.clearData()
-            }
+            isValid = true;
+//            val cal: Calendar = Calendar.getInstance();
+//            isValid = cal.timeInMillis < logginUser!!.expiredDate!!
+//            if (!isValid) {
+//                prefRepository.clearData()
+//            }
         }
 
         if (!isValid) {
@@ -77,15 +109,50 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, C
             showToast("Please log in first")
         };
 
-        checkinActivityViewModel.checkinResult.observe(this, androidx.lifecycle.Observer {
-            if (it) {
-                Log.d(TAG, "Check in result: $result");
-                insertSuccessFragment()
-            } else {
-                Log.d(TAG, "Check in failure");
-                insertFailureFragment()
+        val cm = this.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        activeNetwork = cm.activeNetworkInfo
+        isConnected = activeNetwork?.isConnectedOrConnecting == true
+//        telephonyManager = this.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+//        var phoneId: String? = ""
+
+        phoneId = "Android Id: " + getIMEIDeviceId(this)
+        showToast("IMEI: $phoneId")
+        Log.d(TAG, "ANDROI ID: $phoneId")
+
+//        checkinActivityViewModel.checkinResult.observe(this, androidx.lifecycle.Observer {
+//            if (it) {
+//                Log.d(TAG, "Check in result: $result");
+//                insertSuccessFragment("Location", "13PM")
+//            } else {
+//                Log.d(TAG, "Check in failure");
+//                insertFailureFragment()
+//            }
+//        })
+
+        checkinActivityViewModel.checkinResult1.observe(this, androidx.lifecycle.Observer { checkinResult ->
+            spinner?.visibility = View.GONE
+            checkinResult.error?.let {
+                insertFailureFragment(errorMessage)
+            }
+            checkinResult.success?.let {
+                if (this.activity != null) {
+                    insertSuccessFragment("Location: " + this.activity!!.roomId, "Check in at: " + it.date)
+                } else {
+                    insertSuccessFragment(this.activity!!.roomId, it.date)
+                }
+
             }
         })
+
+        checkinActivityViewModel.getActivitiesResult.observe(
+                this,
+                { getActivityResult ->
+                    spinner?.visibility = View.GONE
+                    getActivityResult.success?.let {
+                        _listActivites = it.data
+                    }
+                }
+        )
 
         initNfcAdapter()
 
@@ -157,16 +224,17 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, C
     }
 
     // Embeds the child fragment dynamically
-    private fun insertSuccessFragment() {
-        val childFragment = CheckinSuccessFragment.newInstance("You are in room: BA101", "14.00 PM 23 Apr, 2021")
+    private fun insertSuccessFragment(location: String, date: String) {
+        val childFragment =
+                CheckinSuccessFragment.newInstance(location, date)
 
         supportFragmentManager.beginTransaction()
                 .replace(R.id.fragment_container_checkin, childFragment)
                 .commit()
     }
 
-    private fun insertFailureFragment() {
-        val childFragment = CheckinFailureFragment.newInstance("Cannot connect. Please try again")
+    private fun insertFailureFragment(errorMessage: String) {
+        val childFragment = CheckinFailureFragment.newInstance(errorMessage)
 
         supportFragmentManager.beginTransaction()
                 .replace(R.id.fragment_container_checkin, childFragment)
@@ -199,6 +267,7 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, C
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
 
@@ -222,6 +291,7 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, C
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun handleIntent(intent: Intent?) {
 
         if (intent != null) {
@@ -234,10 +304,11 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, C
                 return
             }
             tagId = tag!!.tagId
-            Log.d(TAG, "$tagId")
+//            Log.d(TAG, "$tagId")
 //            showToast("Tag tapped: $tagId")
 
             val action = intent.action
+
 
 
             if (NfcAdapter.ACTION_NDEF_DISCOVERED == action) {
@@ -257,7 +328,11 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, C
 
 
                         for (ndefRecord in records) {
-                            if (ndefRecord.tnf == NdefRecord.TNF_WELL_KNOWN && Arrays.equals(ndefRecord.type, NdefRecord.RTD_TEXT)) {
+                            if (ndefRecord.tnf == NdefRecord.TNF_WELL_KNOWN && Arrays.equals(
+                                            ndefRecord.type,
+                                            NdefRecord.RTD_TEXT
+                                    )
+                            ) {
                                 try {
                                     payload = readText(ndefRecord)
                                 } catch (e: UnsupportedEncodingException) {
@@ -269,36 +344,54 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, C
                     }
 
                     if (payload != null) {
-                        onTagTapped(NfcUtils.getUID(intent), payload)
+//                        onTagTapped(NfcUtils.getUID(intent), payload)
+                        var nfcId = NfcUtils.getUID(intent)
 
                         if (logginUser != null && logginUser!!.token != null) {
-                            var attendance = Attendance(
-                                    logginUser!!.token!!,
-                                    logginUser!!.userID,
-                                    NfcUtils.getUID(intent),
-                                    Calendar.getInstance().timeInMillis.toString()
-                            );
 
-                            val url: String = "https://recordattendance-1fa08-default-rtdb.firebaseio.com/orders/${logginUser!!.userID}.json?auth=${logginUser!!.token}";
+//                            "startTime": "2021-10-05T12:48:00.000Z",
+                            this.activity = getActivityId(nfcId)
 
-                            Log.d(TAG, "requestURL: $url")
-                            Log.d(TAG, "attendance: $attendance")
+//                            this.activity = getActivityId("enab101nfc")
 
+                            if (activity == null) {
+                                insertFailureFragment("Please check your location and time again!")
+                            } else {
+                                val date = LocalDateTime.now()
+                                val text = date.format(formatter)
+                                val parsedDate = LocalDateTime.parse(text, formatter)
 
-                            checkinActivityViewModel.checkin(url, attendance)
+                                phoneId = "Android Id: " + getIMEIDeviceId(this)
+                                var attendance = Attendance(
+                                        logginUser!!.data.studentID,
+                                        text,
+//                                Calendar.getInstance().timeInMillis.toString(),
+                                        NfcUtils.getUID(intent),
+                                        this.activity!!.id,
+                                        phoneId!!
+                                );
 
-                            Log.d(TAG, "result in Activity: $result")
+                                val url: String = "https://mobile-attendance-recorder.herokuapp.com/api/v1/checkIn";
+                                val token: String = logginUser!!.token;
 
-                            val test = checkinActivityViewModel.result
+//                                Log.d(TAG, "requestURL: $url")
+//                                Log.d(TAG, "attendance: $attendance")
 
-                            Log.d(TAG, "test result in Activity: $test")
+//                            getActivityId(nfcId)
+                                if (isConnected) {
+                                    spinner?.visibility = View.VISIBLE
+                                    checkinActivityViewModel.checkin(url, token, attendance)
 
-//                            if (test) {
-//                                Log.d(TAG, "Check in result: $result")
-//                                callbacks?.submitSuccessful()
-//                            } else {
-//                                callbacks?.submitFailure()
-//                            }
+//                                Log.d(TAG, "result in Activity: $result")
+
+                                    val test = checkinActivityViewModel.result
+
+//                                Log.d(TAG, "test result in Activity: $test")
+
+                                } else {
+                                    showToast("No internet access!!")
+                                }
+                            }
                         }
 
 
@@ -344,7 +437,12 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, C
         // e.g. "en"
 
         // Get the Text
-        return String(payload, languageCodeLength + 1, payload.size - languageCodeLength - 1, Charset.defaultCharset())
+        return String(
+                payload,
+                languageCodeLength + 1,
+                payload.size - languageCodeLength - 1,
+                Charset.defaultCharset()
+        )
     }
 
 
@@ -360,5 +458,92 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks, C
         insertTodayClassesFragment()
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun getActivityId(nfcId: String): StudentActivity? {
+        Log.d(TAG, "Call get activitieID with param ${nfcId}")
+
+        Log.d(TAG, "Call get activitieID with data: $_listActivites")
+
+        _listActivites.let {
+
+            var date: LocalDateTime = LocalDateTime.now()
+            val result: List<StudentActivity>? = it?.filter { item -> item.nfcId == nfcId && LocalDateTime.parse(item.startTime, formatter).minusMinutes(30).isBefore(date) && date.isBefore(LocalDateTime.parse(item.endTime, formatter)) }
+
+//            val result: List<StudentActivity>? = it?.filter { item -> item.nfcId == nfcId }
+            Log.d(TAG, "Call get activitieID with result: ${result}")
+
+
+//            var checkdate1 = LocalDateTime.parse(result?.first()?.startTime, formatter).isBefore(date);
+//            Log.d(TAG, "Check start time: ${LocalDateTime.parse(result?.first()?.startTime, formatter)}")
+//            Log.d(TAG, "Check current time: ${date}")
+//            Log.d(TAG, "Check compare time: ${LocalDateTime.parse(result?.first()?.startTime, formatter).isBefore(date)}")
+
+
+            if (result.isNullOrEmpty()) {
+                isConnected = activeNetwork?.isConnectedOrConnecting == true
+
+                var value = activeNetwork?.isConnectedOrConnecting
+                showToast("Internet value: $value")
+
+                if (!isConnected) {
+                    showToast("No internet access!!!")
+                } else {
+                    showToast("You do not have any class at the moment!")
+                }
+//                Log.d(TAG, "You do not have any class at the moment!")
+                return null
+            } else {
+                Log.d(TAG, "Call get activitieID with id: ${result}")
+
+                for (item in result) {
+                    Log.d(TAG, "CHECK DATE FOR ITEM: ${item}")
+
+                    var checkdate1 = LocalDateTime.parse(item.startTime, formatter).isBefore(date);
+//                    Log.d(TAG, "Check start time: ${LocalDateTime.parse(item.startTime, formatter)}")
+//                    Log.d(TAG, "Check current time: ${date}")
+//                    Log.d(TAG, "Check compare time: ${checkdate1}")
+//
+//                    var checkdate2 = date.isBefore(LocalDateTime.parse(item.endTime, formatter))
+//                    Log.d(TAG, "Check end time: ${LocalDateTime.parse(item.endTime, formatter)}")
+//                    Log.d(TAG, "Check current time: ${date}")
+//                    Log.d(TAG, "Check compare end time: ${checkdate2}")
+                }
+
+
+
+                return result.first()
+
+            }
+        }
+
+        return null
+    }
+
+    fun getIMEIDeviceId(context: Context): String? {
+        val deviceId: String
+        deviceId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            Log.d(TAG, "Get Android ID")
+            Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+        } else {
+            val mTelephony = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (context.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+                    return ""
+                }
+            }
+            assert(mTelephony != null)
+            if (mTelephony.deviceId != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    mTelephony.imei
+                } else {
+                    mTelephony.deviceId
+                }
+            } else {
+                Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+            }
+        }
+        Log.d("deviceId", deviceId)
+        return deviceId
+    }
 
 }

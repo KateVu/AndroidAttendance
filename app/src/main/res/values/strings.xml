@@ -16,7 +16,7 @@
     <string name="email_login">Student Email</string>
     <string name="password">Password</string>
     <string name="login">CONTINUE</string>
-    <string name="title_activity_checkin">CheckinActivity</string>
+    <string name="title_activity_checkin">Today Activities</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
     <string name="nav_header_title">Android Studio</string>
@@ -33,4 +33,5 @@
     <string name="failure_message">FAILED!</string>
     <string name="btn_ok">OK</string>
     <string name="menu_classes">My Classes</string>
+    <string name="studentid">Student ID</string>
 </resources>
