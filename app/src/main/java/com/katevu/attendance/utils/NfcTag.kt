@@ -9,7 +9,7 @@ import android.util.Log
 import java.io.IOException
 import java.util.*
 
-class WritableTag @Throws(FormatException::class) constructor(tag: Tag) {
+class NfcTag @Throws(FormatException::class) constructor(tag: Tag) {
     private val NDEF = Ndef::class.java.canonicalName
     private val NDEF_FORMATABLE = NdefFormatable::class.java.canonicalName
 

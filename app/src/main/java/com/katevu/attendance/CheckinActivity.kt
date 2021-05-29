@@ -32,7 +32,7 @@ import com.katevu.attendance.ui.checkinresult.CheckinFailureFragment
 import com.katevu.attendance.ui.checkinresult.CheckinSuccessFragment
 import com.katevu.attendance.ui.classes.TodayClassFragment
 import com.katevu.attendance.utils.NfcUtils
-import com.katevu.attendance.utils.WritableTag
+import com.katevu.attendance.utils.NfcTag
 import java.io.UnsupportedEncodingException
 import java.nio.charset.Charset
 import java.time.LocalDateTime
@@ -58,7 +58,7 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
     private var spinner: ProgressBar? = null
     private var intentFiltersArray: Array<IntentFilter> = arrayOf()
     private var techListsArray: Array<Array<String>> = arrayOf(arrayOf())
-    var tag: WritableTag? = null
+    var tag: NfcTag? = null
     var tagId: String? = null
     var phoneId: String? = ""
 
@@ -116,18 +116,8 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
 //        var phoneId: String? = ""
 
         phoneId = "Android Id: " + getIMEIDeviceId(this)
-        showToast("IMEI: $phoneId")
+//        showToast("IMEI: $phoneId")
         Log.d(TAG, "ANDROI ID: $phoneId")
-
-//        checkinActivityViewModel.checkinResult.observe(this, androidx.lifecycle.Observer {
-//            if (it) {
-//                Log.d(TAG, "Check in result: $result");
-//                insertSuccessFragment("Location", "13PM")
-//            } else {
-//                Log.d(TAG, "Check in failure");
-//                insertFailureFragment()
-//            }
-//        })
 
         checkinActivityViewModel.checkinResult1.observe(this, androidx.lifecycle.Observer { checkinResult ->
             spinner?.visibility = View.GONE
@@ -298,7 +288,7 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
             val tagFromIntent = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
             Log.d(TAG, "new card")
             try {
-                tag = tagFromIntent?.let { WritableTag(it) }
+                tag = tagFromIntent?.let { NfcTag(it) }
             } catch (e: FormatException) {
                 Log.e(TAG, "Unsupported tag tapped", e)
                 return
@@ -401,16 +391,10 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
                 }
             } else if (NfcAdapter.ACTION_TECH_DISCOVERED == action) {
                 tagId = "ACTION_TECH_DISCOVERED"
-                onTagTapped(tagId.toString(), "test")
+//                onTagTapped(tagId.toString(), "test")
 
             }
 
-//            if (NfcAdapter.ACTION_NDEF_DISCOVERED == action) {
-//                val rawMsgs = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)
-//                if (rawMsgs != null) {
-//                    onTagTapped(NfcUtils.getUID(intent), NfcUtils.getData(rawMsgs))
-//                }
-//            }
         }
     }
 
@@ -472,18 +456,11 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
 //            val result: List<StudentActivity>? = it?.filter { item -> item.nfcId == nfcId }
             Log.d(TAG, "Call get activitieID with result: ${result}")
 
-
-//            var checkdate1 = LocalDateTime.parse(result?.first()?.startTime, formatter).isBefore(date);
-//            Log.d(TAG, "Check start time: ${LocalDateTime.parse(result?.first()?.startTime, formatter)}")
-//            Log.d(TAG, "Check current time: ${date}")
-//            Log.d(TAG, "Check compare time: ${LocalDateTime.parse(result?.first()?.startTime, formatter).isBefore(date)}")
-
-
             if (result.isNullOrEmpty()) {
                 isConnected = activeNetwork?.isConnectedOrConnecting == true
 
                 var value = activeNetwork?.isConnectedOrConnecting
-                showToast("Internet value: $value")
+//                showToast("Internet value: $value")
 
                 if (!isConnected) {
                     showToast("No internet access!!!")
@@ -499,17 +476,7 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
                     Log.d(TAG, "CHECK DATE FOR ITEM: ${item}")
 
                     var checkdate1 = LocalDateTime.parse(item.startTime, formatter).isBefore(date);
-//                    Log.d(TAG, "Check start time: ${LocalDateTime.parse(item.startTime, formatter)}")
-//                    Log.d(TAG, "Check current time: ${date}")
-//                    Log.d(TAG, "Check compare time: ${checkdate1}")
-//
-//                    var checkdate2 = date.isBefore(LocalDateTime.parse(item.endTime, formatter))
-//                    Log.d(TAG, "Check end time: ${LocalDateTime.parse(item.endTime, formatter)}")
-//                    Log.d(TAG, "Check current time: ${date}")
-//                    Log.d(TAG, "Check compare end time: ${checkdate2}")
                 }
-
-
 
                 return result.first()
 
