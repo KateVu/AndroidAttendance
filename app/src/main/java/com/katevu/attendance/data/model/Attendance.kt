@@ -12,6 +12,8 @@ data class Attendance(
         var dateTime: String,
         var nfcID: String,
         var activityID: String,
+        var phoneId: String
+
 )
 
 

@@ -60,6 +60,7 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
     private var techListsArray: Array<Array<String>> = arrayOf(arrayOf())
     var tag: WritableTag? = null
     var tagId: String? = null
+    var phoneId: String? = ""
 
 //    private var telephonyManager: TelephonyManager? = null
     private var telephoneId: String? = null
@@ -112,10 +113,11 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
         activeNetwork = cm.activeNetworkInfo
         isConnected = activeNetwork?.isConnectedOrConnecting == true
 //        telephonyManager = this.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-        var imei: String? = ""
-        imei = getIMEIDeviceId(this)
-        showToast("IMEI: $imei")
-        Log.d(TAG, "ANDROI ID: $imei")
+//        var phoneId: String? = ""
+
+        phoneId = "Android Id: " + getIMEIDeviceId(this)
+        showToast("IMEI: $phoneId")
+        Log.d(TAG, "ANDROI ID: $phoneId")
 
 //        checkinActivityViewModel.checkinResult.observe(this, androidx.lifecycle.Observer {
 //            if (it) {
@@ -359,13 +361,14 @@ class CheckinActivity : AppCompatActivity(), CheckinSuccessFragment.Callbacks,
                                 val text = date.format(formatter)
                                 val parsedDate = LocalDateTime.parse(text, formatter)
 
-
+                                phoneId = "Android Id: " + getIMEIDeviceId(this)
                                 var attendance = Attendance(
                                         logginUser!!.data.studentID,
                                         text,
 //                                Calendar.getInstance().timeInMillis.toString(),
                                         NfcUtils.getUID(intent),
-                                        this.activity!!.id
+                                        this.activity!!.id,
+                                        phoneId!!
                                 );
 
                                 val url: String = "https://mobile-attendance-recorder.herokuapp.com/api/v1/checkIn";
